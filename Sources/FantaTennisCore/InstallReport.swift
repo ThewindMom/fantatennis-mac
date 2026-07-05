@@ -5,6 +5,7 @@ public struct InstallReport: Sendable {
     public let seedArchiveSHA256: String
     public let extractedFiles: [String]
     public let winePath: String?
+    public let runtime: WindowsRuntime?
     public let config: LauncherConfig
 
     public init(
@@ -12,18 +13,21 @@ public struct InstallReport: Sendable {
         seedArchiveSHA256: String,
         extractedFiles: [String],
         winePath: String?,
+        runtime: WindowsRuntime? = nil,
         config: LauncherConfig
     ) {
         self.installDirectory = installDirectory
         self.seedArchiveSHA256 = seedArchiveSHA256
         self.extractedFiles = extractedFiles.sorted()
         self.winePath = winePath
+        self.runtime = runtime
         self.config = config
     }
 
     public func renderPlainText() -> String {
-        let runtimeLine = winePath.map { "Wine runtime: \($0)" }
-            ?? "Wine runtime: Wine or CrossOver is required to run the Windows game binary on macOS."
+        let runtimeLine = runtime.map { "Windows runtime: \($0.displayName) at \($0.executablePath)" }
+            ?? winePath.map { "Windows runtime: Wine at \($0)" }
+            ?? "Windows runtime: CrossOver or a compatible Wine runtime is required to run the Windows game binary on macOS."
         let files = extractedFiles.isEmpty ? "none" : extractedFiles.joined(separator: ", ")
 
         return """

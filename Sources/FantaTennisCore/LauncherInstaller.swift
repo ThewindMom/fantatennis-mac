@@ -140,7 +140,7 @@ public struct LauncherInstaller {
     public func writeRuntimeWrapper(
         in directory: URL,
         launcherPath: String? = nil,
-        winePath: String?
+        runtime: WindowsRuntime?
     ) throws -> URL {
         let wrapper = directory.appending(path: "run-windows-client.command")
         let launcherPath = launcherPath ?? config.seedLauncherPath
@@ -148,32 +148,45 @@ public struct LauncherInstaller {
         guard fileManager.fileExists(atPath: launcher.path) else {
             throw LauncherInstallError.missingSeedLauncher(launcherPath)
         }
-        let runtime = winePath ?? "wine"
-        let script = """
-        #!/bin/sh
-        cd "$(dirname "$0")"
-        if ! command -v "\(runtime)" >/dev/null 2>&1; then
-          echo "Wine or CrossOver is required to run \(launcherPath) on macOS."
-          exit 69
-        fi
-        exec "\(runtime)" "\(launcherPath)"
-        """
+        let script = Self.runtimeWrapperScript(launcherPath: launcherPath, runtime: runtime)
         try script.write(to: wrapper, atomically: true, encoding: .utf8)
         try fileManager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: wrapper.path)
         return wrapper
     }
 
+    public func writeRuntimeWrapper(
+        in directory: URL,
+        launcherPath: String? = nil,
+        winePath: String?
+    ) throws -> URL {
+        let runtime = winePath.map { WindowsRuntime(kind: .wine, executablePath: $0, bottleName: nil) }
+        return try writeRuntimeWrapper(in: directory, launcherPath: launcherPath, runtime: runtime)
+    }
+
     public static func resolveWindowsRuntime(pathEnvironment: String? = ProcessInfo.processInfo.environment["PATH"]) -> String? {
-        if let wine = findExecutable("wine", pathEnvironment: pathEnvironment) {
-            return wine
+        resolveWindowsRuntimeDetails(pathEnvironment: pathEnvironment)?.executablePath
+    }
+
+    public static func resolveWindowsRuntimeDetails(
+        pathEnvironment: String? = ProcessInfo.processInfo.environment["PATH"]
+    ) -> WindowsRuntime? {
+        let crossoverWine = "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+        if FileManager.default.isExecutableFile(atPath: crossoverWine) {
+            return WindowsRuntime(kind: .crossover, executablePath: crossoverWine, bottleName: "FantaTennis")
         }
-        let candidates = [
+        let bundledWineCandidates = [
             "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
             "/Applications/Wine Stable.app/Contents/Resources/wine/bin/wine",
             "/Applications/Wine Staging.app/Contents/Resources/wine/bin/wine",
             "/Applications/Wine Devel.app/Contents/Resources/wine/bin/wine",
         ]
-        return candidates.first { FileManager.default.isExecutableFile(atPath: $0) }
+        if let found = bundledWineCandidates.first(where: { FileManager.default.isExecutableFile(atPath: $0) }) {
+            return WindowsRuntime(kind: .wine, executablePath: found, bottleName: nil)
+        }
+        if let wine = findExecutable("wine", pathEnvironment: pathEnvironment) {
+            return WindowsRuntime(kind: .wine, executablePath: wine, bottleName: nil)
+        }
+        return nil
     }
 
     public static func relativePath(of file: URL, under base: URL) -> String {
@@ -232,6 +245,40 @@ public struct LauncherInstaller {
             return true
         } catch {
             return false
+        }
+    }
+
+    private static func runtimeWrapperScript(launcherPath: String, runtime: WindowsRuntime?) -> String {
+        guard let runtime else {
+            return """
+            #!/bin/sh
+            cd "$(dirname "$0")"
+            echo "CrossOver or a compatible Wine runtime is required to run \(launcherPath) on macOS."
+            echo "Install CrossOver, then open FantaTennis.app again and press Launch."
+            exit 69
+            """
+        }
+        switch runtime.kind {
+        case .crossover:
+            let bottleName = runtime.bottleName ?? "FantaTennis"
+            return """
+            #!/bin/sh
+            cd "$(dirname "$0")"
+            export CX_BOTTLE="\(bottleName)"
+            export WINEPREFIX="$HOME/Library/Application Support/CrossOver/Bottles/$CX_BOTTLE"
+            mkdir -p "$WINEPREFIX"
+            exec "\(runtime.executablePath)" "\(launcherPath)"
+            """
+        case .wine:
+            return """
+            #!/bin/sh
+            cd "$(dirname "$0")"
+            if [ ! -x "\(runtime.executablePath)" ]; then
+              echo "Configured Wine runtime is missing: \(runtime.executablePath)"
+              exit 69
+            fi
+            exec "\(runtime.executablePath)" "\(launcherPath)"
+            """
         }
     }
 

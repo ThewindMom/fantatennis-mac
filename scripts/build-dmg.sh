@@ -10,6 +10,7 @@ dist_dir="$root_dir/dist"
 build_dir="$root_dir/.build/dmg"
 stage_dir="$build_dir/FantaTennis Mac"
 dmg_path="$dist_dir/FantaTennisMac-${version}.dmg"
+codesign_identity="${CODESIGN_IDENTITY:-}"
 
 if [ "$(uname -s)" != "Darwin" ]; then
   echo "build-dmg.sh must run on macOS because it uses hdiutil" >&2
@@ -73,6 +74,10 @@ cat > "$stage_dir/$app_name/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
+if [ -n "$codesign_identity" ]; then
+  codesign --force --options runtime --timestamp --sign "$codesign_identity" "$stage_dir/$app_name"
+fi
+
 cat > "$stage_dir/Install FantaTennis.command" <<'INSTALLER'
 #!/bin/sh
 set -eu
@@ -120,6 +125,10 @@ hdiutil create \
   -ov \
   -format UDZO \
   "$dmg_path"
+
+if [ -n "$codesign_identity" ]; then
+  codesign --force --timestamp --sign "$codesign_identity" "$dmg_path"
+fi
 
 shasum -a 256 "$dmg_path" > "$dmg_path.sha256"
 echo "Built $dmg_path"

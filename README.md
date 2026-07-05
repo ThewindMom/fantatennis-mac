@@ -3,10 +3,10 @@
 Swift command-line installer for the Windows-only JFTSE/FantaTennis client at
 <https://jftse.com/>.
 
-This project does not redistribute the game client. It downloads the official
-`FantaTennis.7z` seed archive from JFTSE, verifies its SHA-256, extracts the
-official `FT_Launcher.exe`, and writes a small wrapper that runs that launcher
-through Wine.
+This project does not redistribute the game client in source control. The macOS
+app downloads the official JFTSE updater manifest, downloads payload files from
+`https://jftse.com/updater/`, verifies MD5s, and writes a launch wrapper for the
+official Windows client.
 
 ## macOS DMG
 
@@ -39,10 +39,17 @@ native updater path to download and verify a small prefix of the official
 payload. Tagged builds publish the `.dmg` and `.dmg.sha256` files as GitHub
 Release assets.
 
-The release DMG is currently unsigned and not notarized. For broad public macOS
-distribution, best practice is to sign the binary and DMG with an Apple
-Developer ID certificate, notarize with Apple, and staple the notarization
-ticket.
+For `jftse.com`, publish the DMG as the macOS client download. The page should
+describe it as a native macOS installer/updater for the official JFTSE Windows
+client. The game executable remains a Windows Direct3D 9 client, so launching
+requires CrossOver or a compatible Wine runtime. CrossOver is preferred by the
+app when present and uses a dedicated `FantaTennis` bottle.
+
+For broad public macOS distribution, sign with an Apple Developer ID
+Application certificate, notarize with Apple, and staple the notarization
+ticket. The local machine currently has an Apple Development identity only,
+which is enough for local development signing but not for public notarized
+distribution.
 
 ## Commands
 
@@ -66,36 +73,12 @@ payload. The game executable itself remains a 32-bit Windows Direct3D 9 binary,
 so a Windows compatibility runtime is still required to launch it. In 2026, the
 most stable macOS target for this kind of payload is CrossOver or another
 actively maintained Wine distribution that can run 32-bit DirectX 9 programs in
-a 64-bit bottle. On Debian or Ubuntu, that usually means enabling i386 and
-installing Wine:
-
-```sh
-sudo dpkg --add-architecture i386
-sudo apt-get update
-sudo apt-get install wine wine32 wine64
-```
+a 64-bit bottle.
 
 The official launcher is a .NET Windows app. If Wine reports that Mono is not
 installed, install Wine Mono into the Wine prefix before launching the client.
 
 `7z` or `7zz` is required to extract the official archive.
-
-## Debian package
-
-```sh
-scripts/build-deb.sh
-```
-
-The package is written to `dist/`. It installs the CLI as
-`/usr/bin/fantatennis-mac`. Linux release builds use Swift's static standard
-library and strip the binary before packaging.
-
-The GitHub Actions Debian workflow still exists for Linux testing. It builds on
-manual dispatch and on `deb-v*` tags. Each workflow run inspects the built
-package with `dpkg-deb`, checks it with `lintian --fail-on error`, installs it,
-runs `fantatennis-mac inspect`, `doctor`, and `install` from `/usr/bin`, then
-launches the generated Wine wrapper under Xvfb for 60 seconds. Tagged Debian
-builds publish the `.deb` as a GitHub Release asset.
 
 ## Reverse-engineered launcher contract
 

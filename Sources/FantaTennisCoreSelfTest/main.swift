@@ -37,7 +37,7 @@ let report = InstallReport(
 let text = report.renderPlainText()
 require(text.contains("FT_Launcher.exe"), "report names launcher")
 require(text.contains("FantaTennis.exe"), "report names game binary")
-require(text.contains("Wine or CrossOver is required"), "report names runtime boundary")
+require(text.contains("CrossOver or a compatible Wine runtime is required"), "report names runtime boundary")
 require(text.contains("https://jftse.com/updater/"), "report names updater")
 
 let installer = LauncherInstaller()
@@ -52,7 +52,21 @@ try Data().write(to: launcherURL)
 let wrapperURL = try installer.writeRuntimeWrapper(in: wrapperRoot, winePath: nil)
 let wrapper = try String(contentsOf: wrapperURL, encoding: .utf8)
 require(wrapper.contains("ClientSeed/FT_Launcher.exe"), "wrapper launches installed seed launcher")
+require(wrapper.contains("CrossOver or a compatible Wine runtime is required"), "wrapper names preferred runtime")
 require(!wrapper.contains("exec \"wine\" \"FantaTennis.exe\""), "wrapper does not bypass launcher seed")
+
+let crossoverWrapperURL = try installer.writeRuntimeWrapper(
+    in: wrapperRoot,
+    launcherPath: config.seedLauncherPath,
+    runtime: WindowsRuntime(
+        kind: .crossover,
+        executablePath: "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        bottleName: "FantaTennis"
+    )
+)
+let crossoverWrapper = try String(contentsOf: crossoverWrapperURL, encoding: .utf8)
+require(crossoverWrapper.contains("CX_BOTTLE=\"FantaTennis\""), "CrossOver wrapper uses dedicated bottle")
+require(crossoverWrapper.contains("ClientSeed/FT_Launcher.exe"), "CrossOver wrapper launches installed seed launcher")
 
 let symlinkedBase = URL(fileURLWithPath: "/tmp")
     .appending(path: "fantatennis-relative-\(UUID().uuidString)", directoryHint: .isDirectory)

@@ -41,6 +41,8 @@ jobs:
           trap cleanup EXIT
           test -x "$mount_dir/fantatennis-mac"
           test -x "$mount_dir/FantaTennis.app/Contents/MacOS/FantaTennisLauncher"
+          plutil -lint "$mount_dir/FantaTennis.app/Contents/Info.plist"
+          codesign --verify --deep --strict "$mount_dir/FantaTennis.app" || true
           test -x "$mount_dir/Install FantaTennis.command"
           test -x "$mount_dir/FantaTennis Doctor.command"
           test -x "$mount_dir/Inspect Launcher.command"

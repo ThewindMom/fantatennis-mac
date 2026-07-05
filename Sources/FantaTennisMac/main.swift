@@ -60,7 +60,11 @@ struct FantaTennisMac {
             print("\(probe.state.rawValue)\t\(probe.statusCode)\t\(url.absoluteString)")
         }
         print("extractor\t\(try LauncherInstaller.locateExtractor())")
-        print("windowsRuntime\t\(LauncherInstaller.resolveWindowsRuntime() ?? "missing")")
+        if let runtime = LauncherInstaller.resolveWindowsRuntimeDetails() {
+            print("windowsRuntime\t\(runtime.displayName)\t\(runtime.executablePath)")
+        } else {
+            print("windowsRuntime\tmissing")
+        }
     }
 
     private static func manifest() async throws {
@@ -83,13 +87,14 @@ struct FantaTennisMac {
             archiveURL: archive,
             destination: destination.appending(path: "ClientSeed", directoryHint: .isDirectory)
         )
-        let wine = LauncherInstaller.resolveWindowsRuntime()
-        _ = try installer.writeRuntimeWrapper(in: destination, winePath: wine)
+        let runtime = LauncherInstaller.resolveWindowsRuntimeDetails()
+        _ = try installer.writeRuntimeWrapper(in: destination, runtime: runtime)
         let report = InstallReport(
             installDirectory: destination,
             seedArchiveSHA256: sha,
             extractedFiles: extracted,
-            winePath: wine,
+            winePath: runtime?.executablePath,
+            runtime: runtime,
             config: .official
         )
         let reportURL = destination.appending(path: "README-macOS.txt")
@@ -113,7 +118,7 @@ struct FantaTennisMac {
         _ = try installer.writeRuntimeWrapper(
             in: destination,
             launcherPath: "FT_Launcher.exe",
-            winePath: LauncherInstaller.resolveWindowsRuntime()
+            runtime: LauncherInstaller.resolveWindowsRuntimeDetails()
         )
         print("Installed or verified \(downloaded.count) payload files in \(destination.path)")
         if limit != nil {

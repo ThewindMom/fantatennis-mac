@@ -12,9 +12,11 @@ final class FantaTennisLauncherApp: NSObject, NSApplicationDelegate {
         defer: false
     )
     private let logView = NSTextView()
+    private let statusLabel = NSTextField(labelWithString: "")
     private let installButton = NSButton(title: "Install / Update", target: nil, action: nil)
     private let launchButton = NSButton(title: "Launch", target: nil, action: nil)
     private let doctorButton = NSButton(title: "Doctor", target: nil, action: nil)
+    private let runtimeButton = NSButton(title: "Get CrossOver", target: nil, action: nil)
     private let destination = FileManager.default.homeDirectoryForCurrentUser
         .appending(path: "Applications/FantaTennis", directoryHint: .isDirectory)
 
@@ -27,7 +29,7 @@ final class FantaTennisLauncherApp: NSObject, NSApplicationDelegate {
         append("FantaTennis macOS launcher")
         append("Install: \(destination.path)")
         append("Native updater manifest: \(LauncherConfig.official.updaterManifestURL.absoluteString)")
-        append("Runtime: \(LauncherInstaller.resolveWindowsRuntime() ?? "missing; install CrossOver or Wine to launch")")
+        refreshRuntimeStatus()
     }
 
     private func configureWindow() {
@@ -44,8 +46,9 @@ final class FantaTennisLauncherApp: NSObject, NSApplicationDelegate {
         let subtitle = NSTextField(labelWithString: "Native macOS installer and launcher for the official JFTSE Windows client payload.")
         subtitle.textColor = .secondaryLabelColor
         subtitle.lineBreakMode = .byWordWrapping
+        statusLabel.textColor = .secondaryLabelColor
 
-        let buttons = NSStackView(views: [installButton, launchButton, doctorButton])
+        let buttons = NSStackView(views: [installButton, launchButton, doctorButton, runtimeButton])
         buttons.orientation = .horizontal
         buttons.spacing = 8
         for button in [installButton, launchButton, doctorButton] {
@@ -55,6 +58,7 @@ final class FantaTennisLauncherApp: NSObject, NSApplicationDelegate {
         installButton.action = #selector(installOrUpdate)
         launchButton.action = #selector(launchGame)
         doctorButton.action = #selector(runDoctor)
+        runtimeButton.action = #selector(openRuntimeDownload)
 
         let scroll = NSScrollView()
         scroll.borderType = .bezelBorder
@@ -65,6 +69,7 @@ final class FantaTennisLauncherApp: NSObject, NSApplicationDelegate {
 
         root.addArrangedSubview(title)
         root.addArrangedSubview(subtitle)
+        root.addArrangedSubview(statusLabel)
         root.addArrangedSubview(buttons)
         root.addArrangedSubview(scroll)
         window.contentView = root
@@ -89,9 +94,10 @@ final class FantaTennisLauncherApp: NSObject, NSApplicationDelegate {
                 _ = try installer.writeRuntimeWrapper(
                     in: destination,
                     launcherPath: "FT_Launcher.exe",
-                    winePath: LauncherInstaller.resolveWindowsRuntime()
+                    runtime: LauncherInstaller.resolveWindowsRuntimeDetails()
                 )
                 append("Install/update complete.")
+                refreshRuntimeStatus()
             } catch {
                 append("ERROR: \(error)")
             }
@@ -115,6 +121,10 @@ final class FantaTennisLauncherApp: NSObject, NSApplicationDelegate {
         }
     }
 
+    @objc private func openRuntimeDownload() {
+        NSWorkspace.shared.open(URL(string: "https://www.codeweavers.com/crossover/download")!)
+    }
+
     @objc private func runDoctor() {
         Task {
             do {
@@ -129,10 +139,21 @@ final class FantaTennisLauncherApp: NSObject, NSApplicationDelegate {
                     append("\(probe.state.rawValue)\t\(probe.statusCode)\t\(url.absoluteString)")
                 }
                 append("extractor\t\(try LauncherInstaller.locateExtractor())")
-                append("runtime\t\(LauncherInstaller.resolveWindowsRuntime() ?? "missing")")
+                let runtime = LauncherInstaller.resolveWindowsRuntimeDetails()
+                append("runtime\t\(runtime.map { "\($0.displayName)\t\($0.executablePath)" } ?? "missing")")
             } catch {
                 append("ERROR: \(error)")
             }
+        }
+    }
+
+    private func refreshRuntimeStatus() {
+        if let runtime = LauncherInstaller.resolveWindowsRuntimeDetails() {
+            statusLabel.stringValue = "Runtime: \(runtime.displayName)"
+            append("Runtime: \(runtime.displayName) at \(runtime.executablePath)")
+        } else {
+            statusLabel.stringValue = "Runtime: missing. Install CrossOver to launch the Windows game client."
+            append("Runtime: missing; install CrossOver to launch.")
         }
     }
 
