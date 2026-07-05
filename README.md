@@ -8,11 +8,31 @@ app downloads the official JFTSE updater manifest, downloads payload files from
 `https://jftse.com/updater/`, verifies MD5s, and writes a launch wrapper for the
 official Windows client.
 
-## macOS DMG
+## Install and run on macOS
 
 Tagged releases build `FantaTennisMac-<version>.dmg`. The primary artifact in
 the image is `FantaTennis.app`, a native macOS installer/launcher for the
 official JFTSE Windows payload.
+
+For end users:
+
+1. Download `FantaTennisMac-<version>.dmg` from the GitHub release linked by
+   `jftse.com`.
+2. Open the DMG and copy `FantaTennis.app` to `/Applications` or
+   `~/Applications`.
+3. Open `FantaTennis.app`.
+4. Click `Install / Update` to download and verify the official client payload.
+   The full payload is installed to `~/Applications/FantaTennis`.
+5. Install CrossOver, then click `Launch` in `FantaTennis.app`.
+
+The app window should open immediately when `FantaTennis.app` is launched. If no
+compatible runtime is installed, it will still open and show `Runtime: missing`.
+That state is expected until CrossOver or a compatible Wine runtime is present.
+
+The full installed payload is not bundled into the DMG. It is downloaded from
+the official updater endpoints and verified with the upstream MD5 manifest.
+
+## macOS DMG contents
 
 The DMG contains:
 
@@ -79,6 +99,32 @@ The official launcher is a .NET Windows app. If Wine reports that Mono is not
 installed, install Wine Mono into the Wine prefix before launching the client.
 
 `7z` or `7zz` is required to extract the official archive.
+
+## Troubleshooting
+
+If `FantaTennis.app` opens but the game does not launch, run `Doctor` in the app.
+The most common result on a fresh Mac is `runtime missing`, which means the
+native macOS installer is working but CrossOver is not installed yet.
+
+If macOS blocks the app because it is unsigned or not notarized, right-click the
+app and choose `Open`, or distribute a Developer ID signed and notarized build
+for public users.
+
+If the app window does not appear, quit any stuck copies and reopen it:
+
+```sh
+pkill -f FantaTennisLauncher
+open ~/Applications/FantaTennis.app
+```
+
+For local validation, the expected installed app launch check is:
+
+```sh
+open ~/Applications/FantaTennis.app
+osascript -e 'tell application "System Events" to tell process "FantaTennisLauncher" to get {frontmost, visible, name of every window}'
+```
+
+The window list should include `FantaTennis`.
 
 ## Reverse-engineered launcher contract
 

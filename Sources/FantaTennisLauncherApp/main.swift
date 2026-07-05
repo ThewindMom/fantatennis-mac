@@ -4,13 +4,20 @@ import Foundation
 
 @main
 @MainActor
-final class FantaTennisLauncherApp: NSObject, NSApplicationDelegate {
-    private let window = NSWindow(
-        contentRect: NSRect(x: 0, y: 0, width: 720, height: 460),
-        styleMask: [.titled, .closable, .miniaturizable, .resizable],
-        backing: .buffered,
-        defer: false
-    )
+enum FantaTennisLauncherMain {
+    private static let delegate = FantaTennisLauncherAppDelegate()
+
+    static func main() {
+        let app = NSApplication.shared
+        app.setActivationPolicy(.regular)
+        app.delegate = delegate
+        app.run()
+    }
+}
+
+@MainActor
+final class FantaTennisLauncherAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+    private var window: NSWindow?
     private let logView = NSTextView()
     private let statusLabel = NSTextField(labelWithString: "")
     private let installButton = NSButton(title: "Install / Update", target: nil, action: nil)
@@ -21,19 +28,57 @@ final class FantaTennisLauncherApp: NSObject, NSApplicationDelegate {
         .appending(path: "Applications/FantaTennis", directoryHint: .isDirectory)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.regular)
-        configureWindow()
-        window.center()
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        configureMenu()
+        showMainWindow()
         append("FantaTennis macOS launcher")
         append("Install: \(destination.path)")
         append("Native updater manifest: \(LauncherConfig.official.updaterManifestURL.absoluteString)")
         refreshRuntimeStatus()
     }
 
-    private func configureWindow() {
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        showMainWindow()
+        return true
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
+    }
+
+    private func configureMenu() {
+        let mainMenu = NSMenu()
+        let appMenuItem = NSMenuItem()
+        let appMenu = NSMenu()
+        appMenu.addItem(
+            withTitle: "Quit FantaTennis",
+            action: #selector(NSApplication.terminate(_:)),
+            keyEquivalent: "q"
+        )
+        appMenuItem.submenu = appMenu
+        mainMenu.addItem(appMenuItem)
+        NSApp.mainMenu = mainMenu
+    }
+
+    private func showMainWindow() {
+        let launcherWindow = window ?? makeWindow()
+        window = launcherWindow
+        launcherWindow.center()
+        launcherWindow.makeKeyAndOrderFront(nil)
+        launcherWindow.orderFrontRegardless()
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func makeWindow() -> NSWindow {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 720, height: 460),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
         window.title = "FantaTennis"
+        window.isReleasedWhenClosed = false
+        window.delegate = self
+
         let root = NSStackView()
         root.orientation = .vertical
         root.spacing = 12
@@ -51,7 +96,7 @@ final class FantaTennisLauncherApp: NSObject, NSApplicationDelegate {
         let buttons = NSStackView(views: [installButton, launchButton, doctorButton, runtimeButton])
         buttons.orientation = .horizontal
         buttons.spacing = 8
-        for button in [installButton, launchButton, doctorButton] {
+        for button in [installButton, launchButton, doctorButton, runtimeButton] {
             button.bezelStyle = .rounded
             button.target = self
         }
@@ -80,6 +125,8 @@ final class FantaTennisLauncherApp: NSObject, NSApplicationDelegate {
             root.bottomAnchor.constraint(equalTo: window.contentView!.bottomAnchor),
             scroll.heightAnchor.constraint(greaterThanOrEqualToConstant: 260),
         ])
+
+        return window
     }
 
     @objc private func installOrUpdate() {
