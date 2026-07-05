@@ -113,6 +113,10 @@ Validated on Apple silicon macOS with CrossOver 26.2.0:
 - `Launch` detects CrossOver, creates a dedicated `FantaTennis` bottle, and
   starts the official `FT_Launcher.exe`.
 - Direct `FantaTennis.exe` startup renders its initial banner under CrossOver.
+  The generated CrossOver wrapper defaults to the D3DMetal backend because it
+  was the most stable observed renderer on Apple silicon. The default wined3d
+  backend rendered but stalled before a server connection. DXVK reached the game
+  server but crashed on this machine with a MoltenVK shader compile error.
 
 The current build is a compatibility-runtime client, not a native rewrite of
 the Windows game executable. On Apple silicon, CrossOver may trigger Apple's
@@ -120,6 +124,10 @@ Intel/Rosetta compatibility warning. Apple says Rosetta remains available
 through macOS 27, with narrower support starting in macOS 28, so this path
 should be presented as a practical compatibility build rather than a long-term
 pure native macOS port.
+
+As of the latest validation, the macOS package reaches the official launcher
+and the Windows game initialization banner. It has not yet been validated as a
+fully playable login/session on macOS.
 
 ## Troubleshooting
 

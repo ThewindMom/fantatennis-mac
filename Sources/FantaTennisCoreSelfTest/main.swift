@@ -66,6 +66,8 @@ let crossoverWrapperURL = try installer.writeRuntimeWrapper(
 )
 let crossoverWrapper = try String(contentsOf: crossoverWrapperURL, encoding: .utf8)
 require(crossoverWrapper.contains("CX_BOTTLE=\"FantaTennis\""), "CrossOver wrapper uses dedicated bottle")
+require(crossoverWrapper.contains("CX_GRAPHICS_BACKEND=\"${CX_GRAPHICS_BACKEND:-d3dmetal}\""), "CrossOver wrapper defaults to D3DMetal")
+require(crossoverWrapper.contains("WINED3DMETAL=\"${WINED3DMETAL:-1}\""), "CrossOver wrapper enables D3DMetal")
 require(crossoverWrapper.contains("cxbottle\" --bottle \"$CX_BOTTLE\" --create --template win10"), "CrossOver wrapper creates missing bottle")
 require(crossoverWrapper.contains("cxbottle.conf"), "CrossOver wrapper checks for a real bottle")
 require(crossoverWrapper.contains("ClientSeed/FT_Launcher.exe"), "CrossOver wrapper launches installed seed launcher")

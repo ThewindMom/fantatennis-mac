@@ -267,6 +267,8 @@ public struct LauncherInstaller {
             cd "$(dirname "$0")"
             export CX_BOTTLE="\(bottleName)"
             export WINEPREFIX="$HOME/Library/Application Support/CrossOver/Bottles/$CX_BOTTLE"
+            export CX_GRAPHICS_BACKEND="${CX_GRAPHICS_BACKEND:-d3dmetal}"
+            export WINED3DMETAL="${WINED3DMETAL:-1}"
             if [ ! -f "$WINEPREFIX/cxbottle.conf" ]; then
               if [ ! -x "\(bottleTool)" ]; then
                 echo "CrossOver bottle tool is missing: \(bottleTool)"
