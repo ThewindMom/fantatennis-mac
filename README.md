@@ -43,7 +43,8 @@ scripts/build-deb.sh
 ```
 
 The package is written to `dist/`. It installs the CLI as
-`/usr/bin/fantatennis-mac`.
+`/usr/bin/fantatennis-mac`. Linux release builds use Swift's static standard
+library and strip the binary before packaging.
 
 The GitHub Actions workflow also builds a `.deb` on manual dispatch and on
 `v*` tags. Each workflow run inspects the built package with `dpkg-deb`, checks

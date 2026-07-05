@@ -33,7 +33,7 @@ else
   esac
 fi
 
-swift build -c release --product "$package_name" --package-path "$root_dir"
+swift build -c release --static-swift-stdlib --product "$package_name" --package-path "$root_dir"
 
 package_root="$work_dir/${package_name}_${version}_${arch}"
 install -d "$package_root/DEBIAN"
@@ -42,6 +42,7 @@ install -d "$package_root/usr/share/doc/$package_name"
 install -d "$package_root/usr/share/man/man1"
 
 install -m 0755 "$root_dir/.build/release/$package_name" "$package_root/usr/bin/$package_name"
+strip --strip-unneeded "$package_root/usr/bin/$package_name" 2>/dev/null || strip "$package_root/usr/bin/$package_name"
 install -m 0644 "$root_dir/README.md" "$package_root/usr/share/doc/$package_name/README.md"
 install -m 0644 "$root_dir/LICENSE" "$package_root/usr/share/doc/$package_name/copyright"
 
@@ -81,12 +82,12 @@ installed_size="$(du -sk "$package_root/usr" | awk '{print $1}')"
 cat > "$package_root/DEBIAN/control" <<CONTROL
 Package: $package_name
 Version: $version
-Section: games
+Section: utils
 Priority: optional
 Architecture: $arch
 Maintainer: $maintainer
 Installed-Size: $installed_size
-Depends: 7zip | p7zip-full
+Depends: libc6 (>= 2.35), 7zip | p7zip-full
 Recommends: wine, wine32 | wine64
 Homepage: https://jftse.com/
 Description: macOS/Linux installer for the JFTSE FantaTennis Windows client
