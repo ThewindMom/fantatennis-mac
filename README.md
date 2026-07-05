@@ -37,7 +37,8 @@ The package is written to `dist/`. It installs the CLI as
 The GitHub Actions workflow also builds a `.deb` on manual dispatch and on
 `v*` tags. Each workflow run installs the built package and runs
 `fantatennis-mac inspect`, `doctor`, and `install` from `/usr/bin` before
-uploading artifacts. Tagged builds publish the `.deb` as a GitHub Release asset.
+launching the generated Wine wrapper under Xvfb for 20 seconds. Tagged builds
+publish the `.deb` as a GitHub Release asset.
 
 ## Reverse-engineered launcher contract
 
