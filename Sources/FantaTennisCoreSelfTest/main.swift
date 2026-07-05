@@ -37,7 +37,7 @@ let report = InstallReport(
 let text = report.renderPlainText()
 require(text.contains("FT_Launcher.exe"), "report names launcher")
 require(text.contains("FantaTennis.exe"), "report names game binary")
-require(text.contains("CrossOver or a compatible Wine runtime is required"), "report names runtime boundary")
+require(text.contains("free Wine-compatible runtime"), "report names free runtime boundary")
 require(text.contains("https://jftse.com/updater/"), "report names updater")
 
 let installer = LauncherInstaller()
@@ -52,8 +52,63 @@ try Data().write(to: launcherURL)
 let wrapperURL = try installer.writeRuntimeWrapper(in: wrapperRoot, winePath: nil)
 let wrapper = try String(contentsOf: wrapperURL, encoding: .utf8)
 require(wrapper.contains("ClientSeed/FT_Launcher.exe"), "wrapper launches installed seed launcher")
-require(wrapper.contains("CrossOver or a compatible Wine runtime is required"), "wrapper names preferred runtime")
+require(wrapper.contains("A free Wine-compatible runtime is required"), "wrapper names free runtime")
+require(wrapper.contains("Install Sikarugir or Wine"), "wrapper recommends free runtime")
 require(!wrapper.contains("exec \"wine\" \"FantaTennis.exe\""), "wrapper does not bypass launcher seed")
+
+let fakeRuntimeRoot = FileManager.default.temporaryDirectory
+    .appending(path: "fantatennis-runtime-\(UUID().uuidString)", directoryHint: .isDirectory)
+try FileManager.default.createDirectory(at: fakeRuntimeRoot, withIntermediateDirectories: true)
+let fakeWine = fakeRuntimeRoot.appending(path: "wine")
+try Data().write(to: fakeWine)
+try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: fakeWine.path)
+let resolvedFreeRuntime = LauncherInstaller.resolveWindowsRuntimeDetails(
+    pathEnvironment: fakeRuntimeRoot.path,
+    configuredWinePath: nil,
+    crossoverWinePath: nil
+)
+require(resolvedFreeRuntime?.kind == .wine, "free Wine runtime is preferred from PATH")
+require(resolvedFreeRuntime?.executablePath == fakeWine.path, "free Wine runtime path is preserved")
+require(
+    LauncherInstaller.runtimeStatus(
+        pathEnvironment: fakeRuntimeRoot.path,
+        configuredWinePath: nil,
+        sikarugirPath: "/tmp/fantatennis-no-sikarugir-\(UUID().uuidString)",
+        crossoverWinePath: nil
+    ) == .ready(WindowsRuntime(kind: .wine, executablePath: fakeWine.path, bottleName: nil)),
+    "runtime status reports free Wine ready"
+)
+
+let fakeSikarugir = FileManager.default.temporaryDirectory
+    .appending(path: "Sikarugir Creator-\(UUID().uuidString).app", directoryHint: .isDirectory)
+try FileManager.default.createDirectory(at: fakeSikarugir, withIntermediateDirectories: true)
+require(
+    LauncherInstaller.runtimeStatus(
+        pathEnvironment: "",
+        configuredWinePath: nil,
+        sikarugirPath: fakeSikarugir.path,
+        crossoverWinePath: nil
+    ) == .sikarugirNeedsEngine,
+    "runtime status reports Sikarugir setup needs engine"
+)
+require(
+    LauncherInstaller.runtimeStatus(
+        pathEnvironment: "",
+        configuredWinePath: nil,
+        sikarugirPath: "/tmp/fantatennis-no-sikarugir-\(UUID().uuidString)",
+        crossoverWinePath: nil
+    ) == .missing,
+    "runtime status reports missing runtime"
+)
+require(
+    LauncherInstaller.runtimeStatus(
+        pathEnvironment: "",
+        configuredWinePath: nil,
+        sikarugirPath: "/tmp/fantatennis-no-sikarugir-\(UUID().uuidString)",
+        crossoverWinePath: fakeWine.path
+    ) == .ready(WindowsRuntime(kind: .crossover, executablePath: fakeWine.path, bottleName: "FantaTennis")),
+    "runtime status reports CrossOver fallback"
+)
 
 let crossoverWrapperURL = try installer.writeRuntimeWrapper(
     in: wrapperRoot,

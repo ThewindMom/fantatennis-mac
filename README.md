@@ -23,13 +23,33 @@ For end users:
 3. Open `FantaTennis.app`.
 4. Click `Install / Update` to download and verify the official client payload.
    The full payload is installed to `~/Applications/FantaTennis`.
-5. Install CrossOver, then click `Launch` in `FantaTennis.app`.
+5. Install a free Wine-compatible runtime, then click `Launch` in
+   `FantaTennis.app`.
+
+The recommended free runtime path in 2026 is
+[Sikarugir](https://github.com/Sikarugir-App/Sikarugir), the actively
+maintained Wineskin successor. Its project README lists this install command:
+
+```sh
+brew upgrade
+brew trust Sikarugir-App/sikarugir
+brew install --cask Sikarugir-App/sikarugir/sikarugir
+```
+
+Apple silicon systems also need Rosetta 2 for current Wine-based Windows game
+compatibility:
+
+```sh
+/usr/sbin/softwareupdate --install-rosetta --agree-to-license
+```
 
 The app window should open immediately when `FantaTennis.app` is launched. If no
 compatible runtime is installed, it will still open and show `Runtime: missing`.
-That state is expected until CrossOver or a compatible Wine runtime is present.
-When CrossOver is present, the generated launcher wrapper creates a dedicated
-`FantaTennis` CrossOver bottle on first launch.
+That state is expected until Sikarugir, Wine, or another compatible runtime is
+present. If Sikarugir Creator is installed but no runnable engine is found, the
+app opens Sikarugir Creator and tells the user to create/select a Wine engine.
+CrossOver is supported as a fallback only for users who already have it; it is
+not required for the public free client path.
 
 The full installed payload is not bundled into the DMG. It is downloaded from
 the official updater endpoints and verified with the upstream MD5 manifest.
@@ -64,8 +84,8 @@ Release assets.
 For `jftse.com`, publish the DMG as the macOS client download. The page should
 describe it as a native macOS installer/updater for the official JFTSE Windows
 client. The game executable remains a Windows Direct3D 9 client, so launching
-requires CrossOver or a compatible Wine runtime. CrossOver is preferred by the
-app when present and uses a dedicated `FantaTennis` bottle.
+requires a Wine-compatible runtime. The app prefers free Wine runtimes when
+present and uses CrossOver only as a fallback.
 
 For broad public macOS distribution, sign with an Apple Developer ID
 Application certificate, notarize with Apple, and staple the notarization
@@ -93,9 +113,12 @@ The macOS app and CLI can natively inspect the service, parse
 `https://jftse.com/updater/files.md5`, and download/verify the official game
 payload. The game executable itself remains a 32-bit Windows Direct3D 9 binary,
 so a Windows compatibility runtime is still required to launch it. In 2026, the
-most stable macOS target for this kind of payload is CrossOver or another
+best free macOS target for this kind of payload is Sikarugir/Wineskin or another
 actively maintained Wine distribution that can run 32-bit DirectX 9 programs in
-a 64-bit bottle.
+a 64-bit bottle. Homebrew's `wine-stable` cask is free, but Homebrew currently
+marks it as deprecated because it does not pass the macOS Gatekeeper check and
+says it will be disabled on 2026-09-01, so Sikarugir is the better public
+recommendation.
 
 The official launcher is a .NET Windows app. If Wine reports that Mono is not
 installed, install Wine Mono into the Wine prefix before launching the client.
@@ -104,7 +127,8 @@ installed, install Wine Mono into the Wine prefix before launching the client.
 
 ## Validation status
 
-Validated on Apple silicon macOS with CrossOver 26.2.0:
+Validated on Apple silicon macOS with CrossOver 26.2.0 while narrowing the
+runtime behavior. CrossOver is not the intended public free dependency:
 
 - `FantaTennis.app` opens a visible native macOS launcher window.
 - `Doctor` reaches the JFTSE seed archive, updater manifest, launcher news, and
@@ -129,11 +153,27 @@ As of the latest validation, the macOS package reaches the official launcher
 and the Windows game initialization banner. It has not yet been validated as a
 fully playable login/session on macOS.
 
+Current free-runtime UX validation:
+
+- The runtime resolver prefers `FANTATENNIS_WINE`, Wine app bundles, and `wine`
+  from `PATH` before falling back to CrossOver.
+- If Sikarugir Creator is installed but no runnable Wine engine is found, the
+  app shows a setup-needed state and opens Sikarugir Creator.
+- If neither a runtime nor Sikarugir Creator is found, the app shows a missing
+  runtime state and opens the Sikarugir project page.
+- If only CrossOver is available, the app labels it as a fallback instead of
+  the recommended public path.
+
+A pure native macOS rewrite is not currently possible from only the official
+`.7z` and `.exe`; that would require the game source code or a clean-room
+reimplementation of the client engine, protocol, asset pipeline, and
+anti-cheat/launcher behavior.
+
 ## Troubleshooting
 
 If `FantaTennis.app` opens but the game does not launch, run `Doctor` in the app.
 The most common result on a fresh Mac is `runtime missing`, which means the
-native macOS installer is working but CrossOver is not installed yet.
+native macOS installer is working but Sikarugir or Wine is not installed yet.
 
 If macOS blocks the app because it is unsigned or not notarized, right-click the
 app and choose `Open`, or distribute a Developer ID signed and notarized build

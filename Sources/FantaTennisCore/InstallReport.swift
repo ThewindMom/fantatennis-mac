@@ -27,7 +27,7 @@ public struct InstallReport: Sendable {
     public func renderPlainText() -> String {
         let runtimeLine = runtime.map { "Windows runtime: \($0.displayName) at \($0.executablePath)" }
             ?? winePath.map { "Windows runtime: Wine at \($0)" }
-            ?? "Windows runtime: CrossOver or a compatible Wine runtime is required to run the Windows game binary on macOS."
+            ?? "Windows runtime: a free Wine-compatible runtime such as Sikarugir or Wine is required to run the Windows game binary on macOS."
         let files = extractedFiles.isEmpty ? "none" : extractedFiles.joined(separator: ", ")
 
         return """
@@ -49,7 +49,7 @@ public struct InstallReport: Sendable {
 
         \(runtimeLine)
 
-        This port installs and inspects the official JFTSE launcher seed. The game executable is still a Windows binary; use Wine or CrossOver to run \(config.seedLauncherPath), then let that official launcher update and start \(config.launchFile).
+        This port installs and inspects the official JFTSE launcher seed. The game executable is still a Windows binary; use Sikarugir, Wine, or CrossOver to run \(config.seedLauncherPath), then let that official launcher update and start \(config.launchFile).
         """
     }
 

@@ -20,3 +20,9 @@ public struct WindowsRuntime: Equatable, Sendable {
         kind.rawValue
     }
 }
+
+public enum RuntimeStatus: Equatable, Sendable {
+    case ready(WindowsRuntime)
+    case sikarugirNeedsEngine
+    case missing
+}
