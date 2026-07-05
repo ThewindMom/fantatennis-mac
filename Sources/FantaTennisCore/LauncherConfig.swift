@@ -9,6 +9,7 @@ public struct LauncherConfig: Equatable, Sendable {
     public let seedArchiveURL: URL
     public let seedArchiveSHA256: String
     public let updaterBaseURL: URL
+    public let updaterManifestURL: URL
     public let seedLauncherPath: String
     public let launchFile: String
 
@@ -21,6 +22,7 @@ public struct LauncherConfig: Equatable, Sendable {
         seedArchiveURL: URL(string: "https://jftse.com/client/FantaTennis.7z")!,
         seedArchiveSHA256: "c19ca21b8e2ab091953b2f631e48853b6477400f4d7000682ac7440f9994f12e",
         updaterBaseURL: URL(string: "https://jftse.com/updater/")!,
+        updaterManifestURL: URL(string: "https://jftse.com/updater/files.md5")!,
         seedLauncherPath: "ClientSeed/FT_Launcher.exe",
         launchFile: "FantaTennis.exe"
     )

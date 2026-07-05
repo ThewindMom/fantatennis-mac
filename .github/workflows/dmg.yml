@@ -18,7 +18,7 @@ jobs:
 
       - name: Build DMG
         env:
-          DMG_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '0.2.0' }}
+          DMG_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '0.3.0' }}
         run: |
           version="${DMG_VERSION#v}"
           DMG_VERSION="$version" scripts/build-dmg.sh
@@ -40,15 +40,17 @@ jobs:
           }
           trap cleanup EXIT
           test -x "$mount_dir/fantatennis-mac"
+          test -x "$mount_dir/FantaTennis.app/Contents/MacOS/FantaTennisLauncher"
           test -x "$mount_dir/Install FantaTennis.command"
           test -x "$mount_dir/FantaTennis Doctor.command"
           test -x "$mount_dir/Inspect Launcher.command"
           "$mount_dir/fantatennis-mac" inspect
           "$mount_dir/fantatennis-mac" doctor
-          printf '\n' | FANTATENNIS_DESTINATION="$install_root/FantaTennis" "$mount_dir/Install FantaTennis.command"
+          "$mount_dir/fantatennis-mac" manifest
+          "$mount_dir/fantatennis-mac" install-full --destination "$install_root/FantaTennis" --limit 3
           test -x "$install_root/FantaTennis/run-windows-client.command"
-          test -f "$install_root/FantaTennis/ClientSeed/FT_Launcher.exe"
-          test -f "$install_root/FantaTennis/ClientSeed/FT_Launcher.exe.config"
+          test -f "$install_root/FantaTennis/FantaTennis.exe"
+          test -f "$install_root/FantaTennis/FT_Launcher.exe"
 
       - name: Upload DMG
         uses: actions/upload-artifact@v4

@@ -6,6 +6,7 @@ let package = Package(
     platforms: [.macOS(.v13)],
     products: [
         .library(name: "FantaTennisCore", targets: ["FantaTennisCore"]),
+        .executable(name: "FantaTennisLauncher", targets: ["FantaTennisLauncherApp"]),
         .executable(name: "fantatennis-mac", targets: ["FantaTennisMac"]),
     ],
     dependencies: [
@@ -20,6 +21,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "FantaTennisCoreSelfTest",
+            dependencies: ["FantaTennisCore"]
+        ),
+        .executableTarget(
+            name: "FantaTennisLauncherApp",
             dependencies: ["FantaTennisCore"]
         ),
         .executableTarget(

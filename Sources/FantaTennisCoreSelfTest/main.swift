@@ -17,6 +17,7 @@ require(config.discordURL.absoluteString == "https://discord.gg/Cw2xZ6n6Wu", "Di
 require(config.seedArchiveURL.absoluteString == "https://jftse.com/client/FantaTennis.7z", "seed archive URL")
 require(config.seedArchiveSHA256 == "c19ca21b8e2ab091953b2f631e48853b6477400f4d7000682ac7440f9994f12e", "seed archive hash")
 require(config.updaterBaseURL.absoluteString == "https://jftse.com/updater/", "updater base URL")
+require(config.updaterManifestURL.absoluteString == "https://jftse.com/updater/files.md5", "updater manifest URL")
 require(config.seedLauncherPath == "ClientSeed/FT_Launcher.exe", "installed seed launcher path")
 require(config.launchFile == "FantaTennis.exe", "launch file")
 
@@ -65,5 +66,15 @@ try FileManager.default.createDirectory(
 try Data().write(to: nestedFile)
 let relativePath = LauncherInstaller.relativePath(of: nestedFile.resolvingSymlinksInPath(), under: symlinkedBase)
 require(relativePath == "ClientSeed/FT_Launcher.exe", "relative path survives symlinked destination")
+
+let manifest = try UpdateManifest(text: """
+\\FantaTennis.exe;3801088;61d478b0888ed0ec39a57aefa6595792
+\\Res\\Ad.res;736071;8f43af68955e3bdb9f5d1605a0f571fb
+""")
+require(manifest.entries.count == 2, "manifest entry count")
+require(manifest.totalByteCount == 4_537_159, "manifest total bytes")
+require(manifest.entries[0].relativePath == "FantaTennis.exe", "manifest root path normalization")
+require(manifest.entries[1].relativePath == "Res/Ad.res", "manifest nested path normalization")
+require(manifest.entries[0].md5 == "61d478b0888ed0ec39a57aefa6595792", "manifest md5")
 
 print("FantaTennisCoreSelfTest passed")

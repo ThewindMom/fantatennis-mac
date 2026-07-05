@@ -8,6 +8,8 @@ public enum LauncherInstallError: Error, CustomStringConvertible {
     case missingExtractor
     case missingSeedLauncher(String)
     case unexpectedArchiveHash(expected: String, actual: String)
+    case unexpectedFileDigest(path: String, expected: String, actual: String)
+    case unexpectedFileSize(path: String, expected: Int, actual: Int)
     case processFailed(command: String, status: Int32)
     case httpDownloadFailed(URL, Int)
     case invalidHTTPResponse(URL)
@@ -20,6 +22,10 @@ public enum LauncherInstallError: Error, CustomStringConvertible {
             "The installed launcher seed is missing at \(path)."
         case let .unexpectedArchiveHash(expected, actual):
             "Downloaded FantaTennis.7z SHA-256 \(actual) did not match expected \(expected)."
+        case let .unexpectedFileDigest(path, expected, actual):
+            "\(path) MD5 \(actual) did not match expected \(expected)."
+        case let .unexpectedFileSize(path, expected, actual):
+            "\(path) size \(actual) did not match expected \(expected)."
         case let .processFailed(command, status):
             "\(command) exited with status \(status)."
         case let .httpDownloadFailed(url, status):
@@ -72,6 +78,51 @@ public struct LauncherInstaller {
         return actualHash
     }
 
+    public func fetchUpdateManifest() async throws -> UpdateManifest {
+        let (data, response) = try await URLSession.shared.data(from: config.updaterManifestURL)
+        guard let http = response as? HTTPURLResponse else {
+            throw LauncherInstallError.invalidHTTPResponse(config.updaterManifestURL)
+        }
+        guard 200 ..< 300 ~= http.statusCode else {
+            throw LauncherInstallError.httpDownloadFailed(config.updaterManifestURL, http.statusCode)
+        }
+        let text = String(decoding: data, as: UTF8.self)
+        return try UpdateManifest(text: text)
+    }
+
+    @discardableResult
+    public func downloadPayload(
+        manifest: UpdateManifest,
+        destination: URL,
+        limit: Int? = nil,
+        progress: ((UpdateManifestEntry, Int, Int) -> Void)? = nil
+    ) async throws -> [UpdateManifestEntry] {
+        try fileManager.createDirectory(at: destination, withIntermediateDirectories: true)
+        let selected = Array(manifest.entries.prefix(limit ?? manifest.entries.count))
+        for (index, entry) in selected.enumerated() {
+            progress?(entry, index + 1, selected.count)
+            let target = destination.appending(path: entry.relativePath)
+            if try fileMatches(entry: entry, at: target) {
+                continue
+            }
+            try fileManager.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+            let remote = config.updaterBaseURL.appending(path: entry.relativePath)
+            let (temporaryURL, response) = try await URLSession.shared.download(from: remote)
+            guard let http = response as? HTTPURLResponse else {
+                throw LauncherInstallError.invalidHTTPResponse(remote)
+            }
+            guard 200 ..< 300 ~= http.statusCode else {
+                throw LauncherInstallError.httpDownloadFailed(remote, http.statusCode)
+            }
+            if fileManager.fileExists(atPath: target.path) {
+                try fileManager.removeItem(at: target)
+            }
+            try fileManager.moveItem(at: temporaryURL, to: target)
+            try verify(entry: entry, at: target)
+        }
+        return selected
+    }
+
     public func extractSeedArchive(archiveURL: URL, destination: URL) throws -> [String] {
         let extractor = try Self.locateExtractor()
         try fileManager.createDirectory(at: destination, withIntermediateDirectories: true)
@@ -86,9 +137,13 @@ public struct LauncherInstaller {
         return try extractedRelativeFiles(in: destination)
     }
 
-    public func writeRuntimeWrapper(in directory: URL, winePath: String?) throws -> URL {
+    public func writeRuntimeWrapper(
+        in directory: URL,
+        launcherPath: String? = nil,
+        winePath: String?
+    ) throws -> URL {
         let wrapper = directory.appending(path: "run-windows-client.command")
-        let launcherPath = config.seedLauncherPath
+        let launcherPath = launcherPath ?? config.seedLauncherPath
         let launcher = directory.appending(path: launcherPath)
         guard fileManager.fileExists(atPath: launcher.path) else {
             throw LauncherInstallError.missingSeedLauncher(launcherPath)
@@ -109,7 +164,16 @@ public struct LauncherInstaller {
     }
 
     public static func resolveWindowsRuntime(pathEnvironment: String? = ProcessInfo.processInfo.environment["PATH"]) -> String? {
-        findExecutable("wine", pathEnvironment: pathEnvironment)
+        if let wine = findExecutable("wine", pathEnvironment: pathEnvironment) {
+            return wine
+        }
+        let candidates = [
+            "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+            "/Applications/Wine Stable.app/Contents/Resources/wine/bin/wine",
+            "/Applications/Wine Staging.app/Contents/Resources/wine/bin/wine",
+            "/Applications/Wine Devel.app/Contents/Resources/wine/bin/wine",
+        ]
+        return candidates.first { FileManager.default.isExecutableFile(atPath: $0) }
     }
 
     public static func relativePath(of file: URL, under base: URL) -> String {
@@ -123,6 +187,11 @@ public struct LauncherInstaller {
     public func sha256(of url: URL) throws -> String {
         let data = try Data(contentsOf: url)
         return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    public func md5(of url: URL) throws -> String {
+        let data = try Data(contentsOf: url)
+        return Insecure.MD5.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
     public static func locateExtractor(pathEnvironment: String? = ProcessInfo.processInfo.environment["PATH"]) throws -> String {
@@ -154,5 +223,35 @@ public struct LauncherInstaller {
             guard values.isRegularFile == true else { return nil }
             return Self.relativePath(of: file, under: destination)
         }.sorted()
+    }
+
+    private func fileMatches(entry: UpdateManifestEntry, at url: URL) throws -> Bool {
+        guard fileManager.fileExists(atPath: url.path) else { return false }
+        do {
+            try verify(entry: entry, at: url)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    private func verify(entry: UpdateManifestEntry, at url: URL) throws {
+        let size = try fileManager.attributesOfItem(atPath: url.path)[.size] as? NSNumber
+        let actualSize = size?.intValue ?? -1
+        guard actualSize == entry.byteCount else {
+            throw LauncherInstallError.unexpectedFileSize(
+                path: entry.relativePath,
+                expected: entry.byteCount,
+                actual: actualSize
+            )
+        }
+        let actualMD5 = try md5(of: url)
+        guard actualMD5 == entry.md5 else {
+            throw LauncherInstallError.unexpectedFileDigest(
+                path: entry.relativePath,
+                expected: entry.md5,
+                actual: actualMD5
+            )
+        }
     }
 }
