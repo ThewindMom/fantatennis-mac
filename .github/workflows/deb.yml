@@ -29,6 +29,17 @@ jobs:
           version="${DEB_VERSION#v}"
           DEB_VERSION="$version" scripts/build-deb.sh
 
+      - name: Install and smoke-test Debian package
+        run: |
+          apt-get install -y ./dist/*.deb
+          command -v fantatennis-mac
+          fantatennis-mac inspect
+          fantatennis-mac doctor
+          fantatennis-mac install --destination /tmp/fantatennis-smoke
+          test -x /tmp/fantatennis-smoke/run-windows-client.command
+          test -f /tmp/fantatennis-smoke/ClientSeed/FT_Launcher.exe
+          test -f /tmp/fantatennis-smoke/ClientSeed/FT_Launcher.exe.config
+
       - name: Upload Debian package
         uses: actions/upload-artifact@v4
         with:

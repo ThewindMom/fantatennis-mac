@@ -35,7 +35,9 @@ The package is written to `dist/`. It installs the CLI as
 `/usr/bin/fantatennis-mac`.
 
 The GitHub Actions workflow also builds a `.deb` on manual dispatch and on
-`v*` tags. Tagged builds publish the `.deb` as a GitHub Release asset.
+`v*` tags. Each workflow run installs the built package and runs
+`fantatennis-mac inspect`, `doctor`, and `install` from `/usr/bin` before
+uploading artifacts. Tagged builds publish the `.deb` as a GitHub Release asset.
 
 ## Reverse-engineered launcher contract
 
