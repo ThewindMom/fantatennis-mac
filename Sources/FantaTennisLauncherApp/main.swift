@@ -45,6 +45,10 @@ final class FantaTennisLauncherAppDelegate: NSObject, NSApplicationDelegate, NSW
         false
     }
 
+    func applicationDidBecomeActive(_ notification: Notification) {
+        refreshRuntimeStatus()
+    }
+
     private func configureMenu() {
         let mainMenu = NSMenu()
         let appMenuItem = NSMenuItem()
@@ -153,19 +157,44 @@ final class FantaTennisLauncherAppDelegate: NSObject, NSApplicationDelegate, NSW
     }
 
     @objc private func launchGame() {
-        let wrapper = destination.appending(path: "run-windows-client.command")
-        guard FileManager.default.isExecutableFile(atPath: wrapper.path) else {
-            append("No installed wrapper found. Run Install / Update first.")
+        let launcherPath = installedLauncherPath()
+        guard let launcherPath else {
+            append("No installed launcher found. Run Install / Update first.")
+            return
+        }
+        guard let runtime = LauncherInstaller.resolveWindowsRuntimeDetails() else {
+            refreshRuntimeStatus()
+            append("Install CrossOver, then press Launch again.")
             return
         }
         do {
+            let installer = LauncherInstaller()
+            let wrapper = try installer.writeRuntimeWrapper(
+                in: destination,
+                launcherPath: launcherPath,
+                runtime: runtime
+            )
+            guard FileManager.default.isExecutableFile(atPath: wrapper.path) else {
+                append("No executable wrapper found. Run Install / Update first.")
+                return
+            }
             let process = Process()
             process.executableURL = wrapper
             try process.run()
-            append("Launch requested.")
+            append("Launch requested with \(runtime.displayName).")
         } catch {
             append("ERROR: \(error)")
         }
+    }
+
+    private func installedLauncherPath() -> String? {
+        let candidates = ["FT_Launcher.exe", LauncherConfig.official.seedLauncherPath]
+        for candidate in candidates {
+            if FileManager.default.fileExists(atPath: destination.appending(path: candidate).path) {
+                return candidate
+            }
+        }
+        return nil
     }
 
     @objc private func openRuntimeDownload() {
@@ -188,6 +217,7 @@ final class FantaTennisLauncherAppDelegate: NSObject, NSApplicationDelegate, NSW
                 append("extractor\t\(try LauncherInstaller.locateExtractor())")
                 let runtime = LauncherInstaller.resolveWindowsRuntimeDetails()
                 append("runtime\t\(runtime.map { "\($0.displayName)\t\($0.executablePath)" } ?? "missing")")
+                refreshRuntimeStatus()
             } catch {
                 append("ERROR: \(error)")
             }

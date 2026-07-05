@@ -261,12 +261,20 @@ public struct LauncherInstaller {
         switch runtime.kind {
         case .crossover:
             let bottleName = runtime.bottleName ?? "FantaTennis"
+            let bottleTool = "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/CrossOver-Hosted Application/cxbottle"
             return """
             #!/bin/sh
             cd "$(dirname "$0")"
             export CX_BOTTLE="\(bottleName)"
             export WINEPREFIX="$HOME/Library/Application Support/CrossOver/Bottles/$CX_BOTTLE"
-            mkdir -p "$WINEPREFIX"
+            if [ ! -f "$WINEPREFIX/cxbottle.conf" ]; then
+              if [ ! -x "\(bottleTool)" ]; then
+                echo "CrossOver bottle tool is missing: \(bottleTool)"
+                exit 69
+              fi
+              rm -rf "$WINEPREFIX"
+              "\(bottleTool)" --bottle "$CX_BOTTLE" --create --template win10 --description "FantaTennis JFTSE"
+            fi
             exec "\(runtime.executablePath)" "\(launcherPath)"
             """
         case .wine:

@@ -28,6 +28,8 @@ For end users:
 The app window should open immediately when `FantaTennis.app` is launched. If no
 compatible runtime is installed, it will still open and show `Runtime: missing`.
 That state is expected until CrossOver or a compatible Wine runtime is present.
+When CrossOver is present, the generated launcher wrapper creates a dedicated
+`FantaTennis` CrossOver bottle on first launch.
 
 The full installed payload is not bundled into the DMG. It is downloaded from
 the official updater endpoints and verified with the upstream MD5 manifest.
@@ -99,6 +101,25 @@ The official launcher is a .NET Windows app. If Wine reports that Mono is not
 installed, install Wine Mono into the Wine prefix before launching the client.
 
 `7z` or `7zz` is required to extract the official archive.
+
+## Validation status
+
+Validated on Apple silicon macOS with CrossOver 26.2.0:
+
+- `FantaTennis.app` opens a visible native macOS launcher window.
+- `Doctor` reaches the JFTSE seed archive, updater manifest, launcher news, and
+  ranking endpoints.
+- `Install / Update` downloads and verifies the official payload.
+- `Launch` detects CrossOver, creates a dedicated `FantaTennis` bottle, and
+  starts the official `FT_Launcher.exe`.
+- Direct `FantaTennis.exe` startup renders its initial banner under CrossOver.
+
+The current build is a compatibility-runtime client, not a native rewrite of
+the Windows game executable. On Apple silicon, CrossOver may trigger Apple's
+Intel/Rosetta compatibility warning. Apple says Rosetta remains available
+through macOS 27, with narrower support starting in macOS 28, so this path
+should be presented as a practical compatibility build rather than a long-term
+pure native macOS port.
 
 ## Troubleshooting
 

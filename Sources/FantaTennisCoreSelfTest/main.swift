@@ -66,6 +66,8 @@ let crossoverWrapperURL = try installer.writeRuntimeWrapper(
 )
 let crossoverWrapper = try String(contentsOf: crossoverWrapperURL, encoding: .utf8)
 require(crossoverWrapper.contains("CX_BOTTLE=\"FantaTennis\""), "CrossOver wrapper uses dedicated bottle")
+require(crossoverWrapper.contains("cxbottle\" --bottle \"$CX_BOTTLE\" --create --template win10"), "CrossOver wrapper creates missing bottle")
+require(crossoverWrapper.contains("cxbottle.conf"), "CrossOver wrapper checks for a real bottle")
 require(crossoverWrapper.contains("ClientSeed/FT_Launcher.exe"), "CrossOver wrapper launches installed seed launcher")
 
 let symlinkedBase = URL(fileURLWithPath: "/tmp")
