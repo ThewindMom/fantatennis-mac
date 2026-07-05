@@ -1,0 +1,67 @@
+name: Build macOS DMG
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  dmg:
+    runs-on: macos-15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Build DMG
+        env:
+          DMG_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '0.2.0' }}
+        run: |
+          version="${DMG_VERSION#v}"
+          DMG_VERSION="$version" scripts/build-dmg.sh
+
+      - name: Install runtime tools for smoke test
+        run: brew install p7zip
+
+      - name: Verify and smoke-test DMG
+        run: |
+          dmg_path="$(ls dist/FantaTennisMac-*.dmg)"
+          hdiutil verify "$dmg_path"
+          mount_dir="$(mktemp -d)"
+          install_root="$(mktemp -d)"
+          hdiutil attach -nobrowse -readonly -mountpoint "$mount_dir" "$dmg_path"
+          cleanup() {
+            hdiutil detach "$mount_dir" || true
+            rm -rf "$install_root" || true
+            rmdir "$mount_dir" || true
+          }
+          trap cleanup EXIT
+          test -x "$mount_dir/fantatennis-mac"
+          test -x "$mount_dir/Install FantaTennis.command"
+          test -x "$mount_dir/FantaTennis Doctor.command"
+          test -x "$mount_dir/Inspect Launcher.command"
+          "$mount_dir/fantatennis-mac" inspect
+          "$mount_dir/fantatennis-mac" doctor
+          printf '\n' | FANTATENNIS_DESTINATION="$install_root/FantaTennis" "$mount_dir/Install FantaTennis.command"
+          test -x "$install_root/FantaTennis/run-windows-client.command"
+          test -f "$install_root/FantaTennis/ClientSeed/FT_Launcher.exe"
+          test -f "$install_root/FantaTennis/ClientSeed/FT_Launcher.exe.config"
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: fantatennis-mac-dmg
+          path: |
+            dist/*.dmg
+            dist/*.dmg.sha256
+
+      - name: Publish release asset
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.dmg
+            dist/*.dmg.sha256

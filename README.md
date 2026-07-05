@@ -1,4 +1,4 @@
-# FantaTennis macOS/Linux launcher
+# FantaTennis macOS launcher
 
 Swift command-line installer for the Windows-only JFTSE/FantaTennis client at
 <https://jftse.com/>.
@@ -7,6 +7,37 @@ This project does not redistribute the game client. It downloads the official
 `FantaTennis.7z` seed archive from JFTSE, verifies its SHA-256, extracts the
 official `FT_Launcher.exe`, and writes a small wrapper that runs that launcher
 through Wine.
+
+## macOS DMG
+
+Tagged releases build `FantaTennisMac-<version>.dmg`.
+
+The DMG contains:
+
+- `fantatennis-mac`: the Swift launcher helper CLI
+- `Install FantaTennis.command`: double-click installer for the official seed
+- `FantaTennis Doctor.command`: endpoint and local runtime checks
+- `Inspect Launcher.command`: prints the reverse-engineered launcher contract
+- `README.md` and `LICENSE`
+
+To build one locally on macOS:
+
+```sh
+scripts/build-dmg.sh
+```
+
+The DMG and SHA-256 checksum are written to `dist/`.
+
+The GitHub Actions DMG workflow builds on manual dispatch and on `v*` tags. It
+verifies the image with `hdiutil verify`, mounts the DMG read-only, checks the
+double-click helper scripts are executable, and runs `fantatennis-mac inspect`
+and `doctor` from inside the mounted image. Tagged builds publish the `.dmg`
+and `.dmg.sha256` files as GitHub Release assets.
+
+The release DMG is currently unsigned and not notarized. For broad public macOS
+distribution, best practice is to sign the binary and DMG with an Apple
+Developer ID certificate, notarize with Apple, and staple the notarization
+ticket.
 
 ## Commands
 
@@ -23,7 +54,9 @@ After install, run:
 ```
 
 Wine with 32-bit support is required to run the Windows launcher/game. On
-Debian or Ubuntu, that usually means enabling i386 and installing Wine:
+macOS, install Wine, WineCX/CrossOver, Whisky, or another Wine distribution
+that can run 32-bit Windows applications. On Debian or Ubuntu, that usually
+means enabling i386 and installing Wine:
 
 ```sh
 sudo dpkg --add-architecture i386
@@ -36,7 +69,7 @@ installed, install Wine Mono into the Wine prefix before launching the client.
 
 `7z` or `7zz` is required to extract the official archive.
 
-## Build a Debian package
+## Debian package
 
 ```sh
 scripts/build-deb.sh
@@ -46,12 +79,12 @@ The package is written to `dist/`. It installs the CLI as
 `/usr/bin/fantatennis-mac`. Linux release builds use Swift's static standard
 library and strip the binary before packaging.
 
-The GitHub Actions workflow also builds a `.deb` on manual dispatch and on
-`v*` tags. Each workflow run inspects the built package with `dpkg-deb`, checks
-it with `lintian --fail-on error`, installs it, runs `fantatennis-mac inspect`,
-`doctor`, and `install` from `/usr/bin`, then launches the generated Wine
-wrapper under Xvfb for 60 seconds. Tagged builds publish the `.deb` as a GitHub
-Release asset.
+The GitHub Actions Debian workflow still exists for Linux testing. It builds on
+manual dispatch and on `deb-v*` tags. Each workflow run inspects the built
+package with `dpkg-deb`, checks it with `lintian --fail-on error`, installs it,
+runs `fantatennis-mac inspect`, `doctor`, and `install` from `/usr/bin`, then
+launches the generated Wine wrapper under Xvfb for 60 seconds. Tagged Debian
+builds publish the `.deb` as a GitHub Release asset.
 
 ## Reverse-engineered launcher contract
 
