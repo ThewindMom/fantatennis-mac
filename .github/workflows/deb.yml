@@ -21,7 +21,7 @@ jobs:
         run: |
           dpkg --add-architecture i386
           apt-get update
-          apt-get install -y dpkg-dev wine wine32 wine64 xvfb
+          apt-get install -y curl dpkg-dev lintian wine wine32 wine64 xvfb
 
       - name: Build Debian package
         env:
@@ -29,6 +29,12 @@ jobs:
         run: |
           version="${DEB_VERSION#v}"
           DEB_VERSION="$version" scripts/build-deb.sh
+
+      - name: Inspect Debian package
+        run: |
+          dpkg-deb --info ./dist/*.deb
+          dpkg-deb --contents ./dist/*.deb
+          lintian --fail-on error ./dist/*.deb
 
       - name: Install and smoke-test Debian package
         run: |
