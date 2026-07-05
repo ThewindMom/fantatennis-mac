@@ -43,12 +43,14 @@ jobs:
           export HOME=/tmp/fantatennis-home
           export WINEPREFIX=/tmp/fantatennis-wineprefix
           install -d -m 700 "$HOME" "$WINEPREFIX"
+          curl -fsSL -o /tmp/wine-mono.msi https://dl.winehq.org/wine/wine-mono/5.1.1/wine-mono-5.1.1-x86.msi
+          timeout 120s xvfb-run -a wine msiexec /i /tmp/wine-mono.msi /qn
           set +e
           timeout 60s xvfb-run -a /tmp/fantatennis-smoke/run-windows-client.command > /tmp/fantatennis-launch.log 2>&1
           launch_status=$?
           set -e
           cat /tmp/fantatennis-launch.log
-          if grep -E "Application could not be started|No such file|could not load kernel32|exited with status" /tmp/fantatennis-launch.log; then
+          if grep -E "Application could not be started|Wine Mono is not installed|No such file|could not load kernel32|exited with status" /tmp/fantatennis-launch.log; then
             exit 1
           fi
           if [ "$launch_status" -ne 124 ]; then

@@ -31,6 +31,9 @@ sudo apt-get update
 sudo apt-get install wine wine32 wine64
 ```
 
+The official launcher is a .NET Windows app. If Wine reports that Mono is not
+installed, install Wine Mono into the Wine prefix before launching the client.
+
 `7z` or `7zz` is required to extract the official archive.
 
 ## Build a Debian package
