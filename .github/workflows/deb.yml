@@ -19,8 +19,9 @@ jobs:
 
       - name: Install packaging tools
         run: |
+          dpkg --add-architecture i386
           apt-get update
-          apt-get install -y dpkg-dev xvfb
+          apt-get install -y dpkg-dev wine wine32 wine64 xvfb
 
       - name: Build Debian package
         env:
@@ -39,8 +40,11 @@ jobs:
           test -x /tmp/fantatennis-smoke/run-windows-client.command
           test -f /tmp/fantatennis-smoke/ClientSeed/FT_Launcher.exe
           test -f /tmp/fantatennis-smoke/ClientSeed/FT_Launcher.exe.config
+          export HOME=/tmp/fantatennis-home
+          export WINEPREFIX=/tmp/fantatennis-wineprefix
+          install -d -m 700 "$HOME" "$WINEPREFIX"
           set +e
-          timeout 20s xvfb-run -a /tmp/fantatennis-smoke/run-windows-client.command > /tmp/fantatennis-launch.log 2>&1
+          timeout 60s xvfb-run -a /tmp/fantatennis-smoke/run-windows-client.command > /tmp/fantatennis-launch.log 2>&1
           launch_status=$?
           set -e
           cat /tmp/fantatennis-launch.log
@@ -51,7 +55,7 @@ jobs:
             echo "Expected the Wine launcher process to stay alive until timeout, got status $launch_status"
             exit "$launch_status"
           fi
-          echo "FT_Launcher.exe stayed alive for 20 seconds under Wine/Xvfb"
+          echo "FT_Launcher.exe stayed alive for 60 seconds under Wine/Xvfb"
 
       - name: Upload Debian package
         uses: actions/upload-artifact@v4

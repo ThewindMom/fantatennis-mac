@@ -55,7 +55,7 @@ Architecture: $arch
 Maintainer: $maintainer
 Installed-Size: $installed_size
 Depends: 7zip | p7zip-full
-Recommends: wine | wine64
+Recommends: wine, wine32 | wine64
 Homepage: https://jftse.com/
 Description: macOS/Linux installer for the JFTSE FantaTennis Windows client
  Downloads and verifies the official JFTSE FantaTennis launcher seed,

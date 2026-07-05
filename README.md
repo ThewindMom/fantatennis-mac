@@ -22,8 +22,16 @@ After install, run:
 ./FantaTennis-install/run-windows-client.command
 ```
 
-Wine is required to run the Windows launcher/game. `7z` or `7zz` is required to
-extract the official archive.
+Wine with 32-bit support is required to run the Windows launcher/game. On
+Debian or Ubuntu, that usually means enabling i386 and installing Wine:
+
+```sh
+sudo dpkg --add-architecture i386
+sudo apt-get update
+sudo apt-get install wine wine32 wine64
+```
+
+`7z` or `7zz` is required to extract the official archive.
 
 ## Build a Debian package
 
@@ -37,7 +45,7 @@ The package is written to `dist/`. It installs the CLI as
 The GitHub Actions workflow also builds a `.deb` on manual dispatch and on
 `v*` tags. Each workflow run installs the built package and runs
 `fantatennis-mac inspect`, `doctor`, and `install` from `/usr/bin` before
-launching the generated Wine wrapper under Xvfb for 20 seconds. Tagged builds
+launching the generated Wine wrapper under Xvfb for 60 seconds. Tagged builds
 publish the `.deb` as a GitHub Release asset.
 
 ## Reverse-engineered launcher contract
