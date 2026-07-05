@@ -7,7 +7,7 @@ on:
       - "v*"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   deb:
@@ -34,3 +34,9 @@ jobs:
         with:
           name: fantatennis-mac-deb
           path: dist/*.deb
+
+      - name: Publish release asset
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.deb

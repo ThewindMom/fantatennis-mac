@@ -34,6 +34,9 @@ scripts/build-deb.sh
 The package is written to `dist/`. It installs the CLI as
 `/usr/bin/fantatennis-mac`.
 
+The GitHub Actions workflow also builds a `.deb` on manual dispatch and on
+`v*` tags. Tagged builds publish the `.deb` as a GitHub Release asset.
+
 ## Reverse-engineered launcher contract
 
 - Seed archive: `https://jftse.com/client/FantaTennis.7z`
