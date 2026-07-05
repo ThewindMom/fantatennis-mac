@@ -12,7 +12,7 @@ permissions:
 jobs:
   deb:
     runs-on: ubuntu-latest
-    container: swift:6.0-jammy
+    container: swift:6.2-jammy
     steps:
       - name: Check out source
         uses: actions/checkout@v4
