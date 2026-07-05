@@ -1,0 +1,8 @@
+.build/
+.swiftpm/
+.omo/
+.codegraph
+downloads/
+dist/
+*.deb
+.DS_Store

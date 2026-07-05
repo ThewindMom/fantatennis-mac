@@ -1,0 +1,36 @@
+name: Build Debian package
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  deb:
+    runs-on: ubuntu-latest
+    container: swift:6.0-jammy
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install packaging tools
+        run: |
+          apt-get update
+          apt-get install -y dpkg-dev
+
+      - name: Build Debian package
+        env:
+          DEB_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '0.1.0' }}
+        run: |
+          version="${DEB_VERSION#v}"
+          DEB_VERSION="$version" scripts/build-deb.sh
+
+      - name: Upload Debian package
+        uses: actions/upload-artifact@v4
+        with:
+          name: fantatennis-mac-deb
+          path: dist/*.deb
